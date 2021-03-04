@@ -1,0 +1,42 @@
+digraph simd {
+
+rankdir=TB;
+splines=ortho;
+ranksep=0.3;
+nodesep=0.1;
+#splines=polyline;
+concentrate=true;
+
+subgraph cluster_data {
+    label="Data";
+    style=filled; color=lightgrey;
+	node [style=filled, color=white];
+    {rank=same; d1, d2, d3, d4;}
+    d1 -> d2 -> d3 -> d4 [style=invis];
+}
+
+subgraph cluster_pu {
+    style=filled; color=lightgrey;
+	node [style=filled, color=white];
+    {rank=same; pu1, pu2, pu3, pu4 [shape=box, label="PU"];}
+    pu1 -> pu2 -> pu3 -> pu4 [style=invis];
+}
+
+subgraph cluster_instructions {
+    label="Instructions";
+    style=filled; color=lightgrey;
+	node [style=filled, color=white];
+    i;
+}
+
+i0, i1 [style=invis];
+i0 -> i1 -> i [style=invis];
+
+d1 -> pu1; d2 -> pu2; d3 -> pu3; d4 -> pu4;
+
+i -> pu1:s [constraint=false];
+i -> pu2:s [constraint=false];
+i -> pu3:s [constraint=false];
+i -> pu4:s [constraint=false];
+
+}

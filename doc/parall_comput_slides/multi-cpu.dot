@@ -1,0 +1,26 @@
+graph multi_cpu {
+
+rankdir=TB;
+splines=ortho;
+node[shape=box];
+
+subgraph cluster_1 {
+    style=filled;
+	node [style=filled, color=white];
+    { rank=same; cpu11, cpu12[label="CPU"]; }
+    cpu11 -- cpu12 [style=invis];
+    r1 [width=1.9, label="RAM"];
+}
+
+subgraph cluster_2 {
+    style=filled;
+	node [style=filled, color=white];
+    { rank=same; cpu21, cpu22[label="CPU"]; }
+    cpu21 -- cpu22 [style=invis];
+    r2 [width=1.9, label="RAM"];
+}
+
+{cpu11, cpu12} -- r1;
+{cpu21, cpu22} -- r2;
+r1 -- r2 [constraint=false];
+}

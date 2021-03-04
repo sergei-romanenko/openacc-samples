@@ -1,0 +1,16 @@
+graph single_cpu {
+
+rankdir=TB;
+splines=ortho;
+node[shape=box];
+
+subgraph cluster_1 {
+    style=filled;
+	node [style=filled, color=white];
+    cpu1[label="CPU"];
+    r1 [width=1.9, label="RAM"];
+}
+
+cpu1 -- r1;
+
+}
