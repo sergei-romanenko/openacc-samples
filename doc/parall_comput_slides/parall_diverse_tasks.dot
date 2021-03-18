@@ -1,0 +1,28 @@
+digraph parall_diverse_tasks {
+
+rankdir=TD;
+splines=line;
+concentrate=true;
+
+subgraph cluster_d {
+    label="Data";
+    style=filled; color=lightgrey;
+    node [style=filled, color=white];
+    d;
+}
+
+subgraph cluster_t {
+    label="Tasks";
+    style=filled; color=lightgrey;
+    node [shape=box, style=filled, color=white];
+    t1 [label="T1"];
+    t2 [label="T2"];
+    t3 [label="T3"];
+    t4 [label="T4"];
+    {rank=same; t1, t2, t3, t4;}
+    t1 -> t2 -> t3 -> t4 [style=invis];
+}
+
+d -> {t1 t2 t3 t4};
+
+}

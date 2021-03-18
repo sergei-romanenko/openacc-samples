@@ -1,0 +1,51 @@
+graph gpu {
+
+rankdir=TB;
+ranksep=0.3;
+#concentrate=true;
+splines=ortho;
+node[shape=box];
+
+subgraph cluster_r {
+    style=filled;
+    node [style=filled, color=white];
+    r [label="DRAM", color=yellow];
+}
+
+subgraph cluster_pu1 {
+    style=filled;
+    node [style=filled, color=white];
+    {rank=min; s1, pu11, pu12, pu13, pu14;}
+    s1 [label="SRAM", color=yellow];
+    pu11, pu12, pu13, pu14 [label="PU"];
+}
+
+subgraph cluster_pu2 {
+    style=filled;
+    node [style=filled, color=white];
+    s2 [label="SRAM", color=yellow];
+    pu21, pu22, pu23, pu24 [label="PU"];
+}
+
+
+subgraph cluster_pu3 {
+    style=filled;
+    node [style=filled, color=white];
+    s3 [label="SRAM", color=yellow];
+    pu31, pu32, pu33, pu34 [label="PU"];
+}
+
+edge [style=invis];
+
+s1 -- pu11 -- pu12 -- pu13 -- pu14;
+
+s1 -- s2 -- s3;
+pu11 -- pu21 -- pu31;
+pu12 -- pu22 -- pu32;
+pu13 -- pu23 -- pu33;
+pu14 -- pu24 -- pu34;
+
+r [width=3.7]
+{pu32 pu33} -- r [style=invis];
+
+}

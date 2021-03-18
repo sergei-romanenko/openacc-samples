@@ -1,0 +1,25 @@
+digraph parall_similar_tasks {
+    rankdir=TD;
+
+    subgraph cluster_d {
+        label="Data";
+        style=filled; color=lightgrey;
+        node [style=filled, color=white];
+        {rank=same; d1, d2, d3, d4;}
+    }
+
+    subgraph cluster_t {
+        label="Tasks";
+        style=filled; color=lightgrey;
+        node [style=filled, color=white];
+        t1, t2, t3, t4 [shape=box, label="T"];
+    }
+
+    d1 -> d2 -> d3 -> d4 [style=invis];
+
+    d1 -> t1;
+    d2 -> t2;
+    d3 -> t3;
+    d4 -> t4;
+
+}

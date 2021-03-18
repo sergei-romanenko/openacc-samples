@@ -9,7 +9,7 @@ subgraph cluster_1 {
 	node [style=filled, color=white];
     { rank=same; cpu11, cpu12[label="CPU"]; }
     cpu11 -- cpu12 [style=invis];
-    r1 [width=1.9, label="RAM"];
+    r1 [width=1.9, label="RAM", color=yellow];
 }
 
 subgraph cluster_2 {
@@ -17,7 +17,7 @@ subgraph cluster_2 {
 	node [style=filled, color=white];
     { rank=same; cpu21, cpu22[label="CPU"]; }
     cpu21 -- cpu22 [style=invis];
-    r2 [width=1.9, label="RAM"];
+    r2 [width=1.9, label="RAM", color=yellow];
 }
 
 {cpu11, cpu12} -- r1;
