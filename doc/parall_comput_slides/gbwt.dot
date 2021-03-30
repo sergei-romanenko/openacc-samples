@@ -1,0 +1,41 @@
+graph gbwt {
+
+rankdir=TB;
+sep=0.0;
+nodesep=0.1;
+node[shape=box];
+
+subgraph cluster_grid {
+    label="Grid";
+    style=filled;
+    color=lightgray;
+#    ordering=out;
+
+    subgraph cluster_b2 {
+        label="Block";
+        style=filled;
+        color=white;
+
+        w11 [label="Warp\n↓...↓"];
+        s1112 [shape=plaintext, label="...", width=0.0];
+        w12 [label="Warp\n↓...↓"];
+    }
+
+    subgraph cluster_b12 {
+        style=invis;
+        s12 [shape=plaintext, label="...", width=0.0];
+    }
+
+    subgraph cluster_b1 {
+        label="Block";
+        color=white;
+
+        w21 [label="Warp\n↓...↓"];
+        s2122 [shape=plaintext, label="...", width=0.0];
+        w22 [label="Warp\n↓...↓"];
+    }
+
+    #w12 -- s12 -- w21 [constraint=false];
+}
+
+}

@@ -49,6 +49,12 @@ style: |
     margin-right: auto;
     width: 20em;
   }
+  img[alt=c25em] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 25em;
+  }
 
 ---
 
@@ -206,15 +212,15 @@ SIMD = single instruction, multiple data).
 
 ## ГП: много-много нитей (threads)
 
+![c20em](gbwt.dot.svg)
+
 Grid -> Block -> Warp -> Thread
 
 - Решётка (grid) состоит из блоков.
 - Блок (block) состоит из жгутов/пучков.
 - Жгут (warp) состоит из нитей.
 
-А зачем нужна структуризация множества нитей?
-
-- Чем ниже по иерархии, тем **более тесное** взаимодействие
+> Чем ниже по иерархии, тем **более тесное** взаимодействие
   возможно между нитями!
 
 ---
@@ -224,7 +230,7 @@ Grid -> Block -> Warp -> Thread
 ### Блоки
 
 - Внутри блока возможна синхронизация нитей (барьеры).
-- Внтури блока нити могут работать с быстрой общей
+- Внутри блока нити могут работать с быстрой общей
   (shared) памятью.
 
 ---
@@ -234,8 +240,8 @@ Grid -> Block -> Warp -> Thread
 ### Жгуты
 
 - Все нити внутри жгута исполняют одну и ту же команду
-  (simt = single instruction - multiple threads).
-  Но некоторые нити при этом могут простиивать.
+  (SIMT = single instruction - multiple threads).
+  Но некоторые нити при этом могут простаивать.
 - Не нужно барьерная синхронизация внутри жгута, поскольку
   управление для всех нитей и так движется синхронно.
 
@@ -253,7 +259,6 @@ Grid -> Block -> Warp -> Thread
 
 <style scoped>
   td {
-    font-size1: 22pt;
     font-size: 0.80em;
     color: green;
   }
@@ -350,10 +355,94 @@ L2 Cache Size                 | 524288 bytes
 
 ---
 
+# Средства программирования для ГП NVIDIA
+
+- **CUDA Toolkit**.
+  - <https://developer.nvidia.com/cuda-toolkit>
+  - C/C++ с расширениями (дополнительными ключевыми словами).
+- **OpenACC** (часть NVIDIA HPC SDK).
+  - <https://developer.nvidia.com/openacc>
+  - C/C++ с директивами `#pragma acc`. Можно компилировать
+    программу игнорируя эти директивы и исполнять программу
+    на обычном ЦП.
+
+---
+
+## Взаимодействие ЦП и ГП
+
+![c25em](host_accel.dot.svg)
+
+- ЦП работает с RAM.
+- ГП работает с DRAM.
+  - DRAM - быстрее, чем RAM, но меньше.
+- Данные переходится пересылать между RAM и DRAM.
+
+---
+
+## Пересылка данных между RAM и DRAM
+
+### CUDA
+
+```
+size_t size = numElements * sizeof(int);
+int *h_a = (int *) malloc(size);
+cudaMalloc(&d_a, size);
+cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+cudaMemcpy(h_a, d_a, size, cudaMemcpyDeviceToHost);
+```
+
+### OpenACC
+
+```
+size_t size = numElements * sizeof(int);
+int *a = new int[numElements];
+#pragma acc enter data copyin(a[0:numElements])
+#pragma acc exit data copyout(a[0:numElements])
+```
+
+---
+
+<!-- _class: lead -->
+
+## Использование CUDA
+
+### <https://developer.nvidia.com/cuda-toolkit>
+
+<br/><br/><br/>
+
+---
+
+## Задача - сложение векторов
+
+```cpp
+void vector_add_cpu(int const n,
+    int const *a, int const *b, int *r) {
+  for (int i = 0; i < n; i++)
+    r[i] = a[i] + b[i];
+}
+```
+
+Хорошо поддаётся распараллеливанию. Почему?
+
+- i-й проход цикла **не использует** результаты работы предыдущих
+  проходов цикла!
+- ⟹ Все проходы цикла можно выполнять в **произвольном
+  порядке**.
+- ⟹ Все проходы цикла можно исполнять **одновременно**.
+
+---
+
+## CUDA. Cложение векторов - ядро
+
+- Исполнение цикла в CUDA - каждый проход цикла исполняется
+  с помощью отдельной нити.
+- Порядок исполнения нитей - произвольный.
+- Ядро может запросить номер своей нити.
+
 
 ```cpp
 __global__
-void vectorAdd(int n,
+void vector_add_kernel(int const n,
     int const *a, int const *b, int *r) {
   int i = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -362,6 +451,80 @@ void vectorAdd(int n,
   }
 }
 ```
+
+---
+
+## CUDA. Работа с номером нити
+
+```cpp
+  int i = threadIdx.x + blockDim.x * blockIdx.x;
+
+  if (i < n) {
+    ...
+  }
+```
+
+- `threadIdx.x` - номер нити внутри блока.
+- `blockIdx.x` - номер блока.
+- `blockDim.x` - размер блока
+
+**Вопрос.** Зачем нужна проверка `i < n`?
+
+**Ответ.** Число нитей = `blockDim.x * gridDim.x`,
+и может быть **больше** `n`.
+
+---
+
+## CUDA. Запуск нитей
+
+```cpp
+void vector_add_gpu(int const n,
+    int const *a, int const *b, int *r) {
+  int TPB = 256; // Threads per block.
+  int BPG = (n + TPB - 1) / TPB; // Blocks per grid
+  vector_add_kernel<<<BPG, TPB>>>(n, a, b, r);
+}
+```
+
+- Запускаем `BPG` блоков, в каждом из которых - `TPB` нитей.
+- Выражение `(n + TPB - 1) / TPB` - это вычурный способ выполнить
+  "деление с округлением вверх". Например:  
+  (257 + 256 - 1) / 256 = 512 / 2 = 2.
+
+
+---
+
+## CUDA. Достоинства
+
+- Можно программировать на широкоизвестном C/C++.
+- Последовательная программа довольно легко переделывается в
+  CUDA-программу (если она **уже является** параллельной по сути).
+- Можно учитывать тонкие свойства "железа" и использовать
+  операции низкого уровня.
+
+---
+
+## CUDA. Недостатки
+
+- Приходится работать в понятиях, отражающих устройство "железа",
+  а не алгоритма (с нитями, а не с переменной цикла).
+- CUDA-программа не может быть скомпилирована обычным C/C++
+  компилятором и исполнена как последовательная.
+- CUDA-программа предназначена для ГП, и её нельзя исполнить на
+  многоядерном процессоре.
+
+А хочется **иметь один текст программы**, который можно было бы
+компилировать и исполнять для **разных архитектур**!
+
+---
+
+<!-- _class: lead -->
+
+## Использование OpenACC
+
+### <https://developer.nvidia.com/openacc>
+
+<br/><br/><br/>
 
 ---
 

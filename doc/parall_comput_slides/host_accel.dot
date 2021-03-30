@@ -1,0 +1,36 @@
+graph host_accel {
+
+compound=true;
+
+rankdir=TB;
+splines=ortho;
+node[shape=box];
+ranksep=0.1;
+
+subgraph cluster_host {
+    label="Host";
+    style=filled;
+	node [style=filled, color=white];
+    "CPU";
+    "RAM" [width=1.6 color=yellow];
+    "CPU" -- "RAM";
+}
+
+subgraph cluster_pci_e {
+    style=invis;
+    dummy[style=invis];
+    dummy -- "PCI-E" [style=invis];
+}
+
+subgraph cluster_accel {
+    label="Accelerator";
+    style=filled;
+	node [style=filled, color=white];
+    "GPU"
+    "DRAM" [width=1.3, color=yellow];
+    "GPU" -- "DRAM";
+}
+
+"RAM" -- "PCI-E" [ltail=cluster_host, constraint=false];
+"PCI-E" -- "DRAM" [lhead=cluster_accel, constraint=false];
+}
