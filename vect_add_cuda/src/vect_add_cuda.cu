@@ -4,12 +4,16 @@
 #include <iostream>
 #include <iomanip>
 
+using std::cout;
+using std::cerr;
+using std::endl;
+
 // Handle CUDA errors
 
 void handle_error(cudaError_t err, const char *file, int line) {
 	if (err != cudaSuccess) {
-		std::cout << cudaGetErrorString(err) << " in " << file << " at line "
-				<< line << std::endl;
+		cout << cudaGetErrorString(err) << " in " << file << " at line " << line
+				<< endl;
 		exit(EXIT_FAILURE);
 	}
 }
@@ -23,8 +27,8 @@ void __handle_last_cuda_error(const char *errorMessage, const char *file,
 	cudaError_t err = cudaGetLastError();
 
 	if (err != cudaSuccess) {
-		std::cout << cudaGetErrorString(err) << " in " << file << " at line "
-				<< line << std::endl;
+		cout << cudaGetErrorString(err) << " in " << file << " at line " << line
+				<< endl;
 		exit(EXIT_FAILURE);
 	}
 }
@@ -49,8 +53,8 @@ void vector_add_gpu(int n, int const *a, int const *b, int *r) {
 	// Launch the Vector Add CUDA Kernel
 	int TPB = 256; // Threads per block.
 	int BPG = (n + TPB - 1) / TPB; // Blocks per grid
-	std::cout << "CUDA kernel launch with " << BPG << " blocks of " << TPB
-			<< " threads" << std::endl;
+	cout << "CUDA kernel launch with " << BPG << " blocks of " << TPB
+			<< " threads" << endl;
 	vector_add_kernel<<<BPG, TPB>>>(n, a, b, r);
 	CHECK(cudaGetLastError());
 }
@@ -62,7 +66,7 @@ int main(void) {
 	// Print the vector length to be used, and compute its size
 	int numElements = 50000;
 	size_t size = numElements * sizeof(int);
-	printf("[Vector addition of %d elements]\n", numElements);
+	cout << "[Vector addition of " << numElements << " elements]" << endl;
 
 	int *h_a = (int *) malloc(size);
 	int *h_b = (int *) malloc(size);
@@ -71,7 +75,7 @@ int main(void) {
 
 	// Verify that allocations succeeded
 	if (h_a == NULL || h_b == NULL || h_r == NULL || r == NULL) {
-		fprintf(stderr, "Failed to allocate host vectors!\n");
+		cerr << "Failed to allocate host vectors!" << endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -81,7 +85,7 @@ int main(void) {
 		h_b[i] = rand() / (int) RAND_MAX;
 	}
 
-	printf("Copy input data from the host memory to the CUDA device\n");
+	cout << "Copy input data from the host memory to the CUDA device" << endl;
 	int *d_a = nullptr;
 	CHECK(cudaMalloc(&d_a, size));
 
@@ -97,7 +101,7 @@ int main(void) {
 	// Launch the Vector Add CUDA Kernel
 	vector_add_gpu(numElements, d_a, d_b, d_r);
 
-	printf("Copy output data from the CUDA device to the host memory\n");
+	cout << "Copy output data from the CUDA device to the host memory" << endl;
 	CHECK(cudaMemcpy(h_r, d_r, size, cudaMemcpyDeviceToHost));
 
 	// Verify that the result vector is correct
@@ -105,13 +109,13 @@ int main(void) {
 
 	for (int i = 0; i < numElements; ++i) {
 		if (h_r[i] != r[i]) {
-			std::cerr << "Result verification failed at element " << i << "!"
-					<< std::endl;
+			cerr << "Result verification failed at element " << i << "!"
+					<< endl;
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	std::cout << "Test PASSED" << std::endl;
+	cout << "Test PASSED" << endl;
 
 	// Free device global memory
 	CHECK(cudaFree(d_a));
@@ -124,7 +128,7 @@ int main(void) {
 	free(h_r);
 	free(r);
 
-	std::cout << "Done" << std::endl;
+	cout << "Done" << endl;
 	return 0;
 }
 
