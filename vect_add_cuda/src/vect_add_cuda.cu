@@ -81,8 +81,8 @@ int main(void) {
 
 	// Initialize the host input vectors
 	for (int i = 0; i < numElements; ++i) {
-		h_a[i] = rand() / (int) RAND_MAX;
-		h_b[i] = rand() / (int) RAND_MAX;
+		h_a[i] = rand();
+		h_b[i] = rand();
 	}
 
 	cout << "Copy input data from the host memory to the CUDA device" << endl;
