@@ -565,12 +565,103 @@ void vector_add_acc(int const n,
 
 - Нельзя использовать некоторые средства низкого уровня,
   предоставляемые ГП от конкретного производителя.
-  - Однако, можно некоторые части программы написать на CUDA,
-    а потом вызвать их из OpenACC-программы.
+  > Однако, можно некоторые части программы написать на CUDA,
+    а потом вызывать их из OpenACC-программы.
 - OpenACC-программы хорошо писать, когда уже освоено программирование
   для ГП на более низком уровне (на CUDA), ибо без этого сложно
   понимать смысл директив `#pragma acc` и смысл некоторых сообщений
   компилятора (выдаваемых в терминах CUDA).
+
+---
+
+<!-- _class: lead -->
+
+## Пример распараллеливания
+
+### Сортировка перечислением (enumeration sort)
+
+<br/><br/><br/>
+
+---
+
+## enum_sort: последовательная
+
+```
+void enum_sort_cpu(int const n, int const *a, int *r) {
+
+  for (int i = 0; i < n; i++) {
+    int v = a[i];
+    int rank = 0;
+    for (int j = 0; j < n; j++) {
+      if (a[j] < v || (a[j] == v && j < i))
+        rank++;
+    }
+    r[rank] = v;
+  }
+}
+
+```
+
+- Сложность _O(n²)_. Но для каждого `i` можно запустить отдельную
+  нить!
+
+---
+
+## enum_sort: параллельная
+
+```
+void enum_sort_acc(int const n, int const *a, int *r) {
+
+#pragma acc parallel loop present(a[:n], r[:n])
+  for (int i = 0; i < n; i++) {
+    int v = a[i];
+    int rank = 0;
+    for (int j = 0; j < n; j++) {
+      if (a[j] < v || (a[j] == v && j < i))
+        rank++;
+    }
+    r[rank] = v;
+  }
+}
+```
+```
+#pragma acc enter data copyin(a[:num_elem]) \
+      create(r[:num_elem])
+  enum_sort_acc(num_elem, a, r);
+#pragma acc exit data delete(a) copyout(r[:num_elem])
+```
+---
+
+## enum_sort: директивы для компилятора
+
+- `present(a[:n], r[:n])` означает, что `a` и `r` уже в памяти
+  ускорителя.
+- `#pragma acc enter data` - создание массивов в ускорителе.
+  - `copyin` - скопировать в ускоритель.
+  - `create` - создать без инициализации.
+- `#pragma acc exit data` - удаление массивов из ускорителя.
+  - `copyout` - скопировать из ускорителя и удалить.
+  - `delete` - просто удалить.
+
+---
+
+## enum_sort: сообщения компилятора
+
+```
+16, Generating present(r[:n],a[:n])
+    Generating Tesla code
+    19, #pragma acc loop gang, vector(128) /* blockIdx.x threadIdx.x */
+    22, #pragma acc loop seq
+22, Loop carried scalar dependence for rank at line 24
+    Scalar last value needed after loop for rank at line 26
+```
+
+- Наружный цикл распараллелился. Каждый проход цикла будет
+  исполняться отдельной нитью. А нити собраны в блоки из 128-ми
+  нитей.
+- Внутренний цикл будет исполняться (каждой из нитей)
+  последовательно. Компилятор распознал, что разные проходы
+  цикла информационно зависимы через переменную `rank`.
 
 ---
 

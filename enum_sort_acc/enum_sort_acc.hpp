@@ -1,0 +1,7 @@
+#ifndef _ENUM_SORT_ACC_
+#define _ENUM_SORT_ACC_
+
+void enum_sort_cpu(int const n, int const *a, int *r);
+void enum_sort_acc(int const n, int const *a, int *r);
+
+#endif
