@@ -10,7 +10,7 @@ project (vect_add_acc LANGUAGES CXX)
 
 set(OpenACC_CXX_FLAGS -fast -acc=gpu -gpu=cc60,lineinfo -Minfo=all,intensity,ccff)
 
-add_executable(vect_add_acc main.cpp vect_add_acc.cpp)
+add_executable(vect_add_acc main.cpp vect_add_acc.cpp vect_add_acc.hpp)
 
 target_compile_features(vect_add_acc PRIVATE cxx_std_17)
 target_compile_options(vect_add_acc PRIVATE ${OpenACC_CXX_FLAGS})
