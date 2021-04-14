@@ -65,7 +65,7 @@ style: |
 
 </br>
 
-### С.А.Романенко</br>
+## С.А.Романенко</br>
 
 ИПМ им. М.В. Келдыша РАН, Москва<br/>
 28 февраля 2021
@@ -91,11 +91,11 @@ style: |
   фон-неймановская машина (ФНМ).
 
 - Необычайная гибкость фон-неймановской машины делала жизнь
-программистов слишком лёгкой. 
+программистов слишком лёгкой.
 
 ---
 
-## Специфические свойства ФНМ
+## Специфические свойства ФНМ (1)
 
 ![c10em](single-cpu.dot.svg)
 
@@ -105,7 +105,7 @@ style: |
 
 ---
 
-## Специфические свойства ФНМ
+## Специфические свойства ФНМ (2)
 
 - Последовательное исполнение команд.
   - Нет проблем с синхронизацией. Если надо решить 2 задачи, то
@@ -225,7 +225,7 @@ Grid -> Block -> Warp -> Thread
 
 ---
 
-## ГП: зачем нужна иерархия для нитей?
+## ГП: зачем нужна иерархия для нитей? (1)
 
 ### Блоки
 
@@ -235,7 +235,7 @@ Grid -> Block -> Warp -> Thread
 
 ---
 
-## ГП: зачем нужна иерархия для нитей?
+## ГП: зачем нужна иерархия для нитей? (2)
 
 ### Жгуты
 
@@ -255,7 +255,7 @@ Grid -> Block -> Warp -> Thread
 
 ---
 
-## ГП: Nvidia GeForce GT 1030
+## ГП: Nvidia GeForce GT 1030 (specs)
 
 <style scoped>
   td {
@@ -333,17 +333,16 @@ L2 Cache Size                 | 524288 bytes
 
 ## Что можно "распараллеливать"?
 
-- Программу.
+- **Программу.**
   - Вставляем директивы для компилятора.
-  - Реорганизуем программу.
+  - **Реорганизуем** программу.
 
-- Алгоритм.
+- **Алгоритм.**
   - Выявляем скрытый параллелизм.
-  - Реорганизуем алгоритм.
   - **Заменяем на другой алгоритм.**
 
-- Метод.
-  - Изменяем или заменяем метод.
+- **Метод.**
+  - Изменяем или **заменяем** метод.
 
 ---
 
@@ -383,7 +382,7 @@ L2 Cache Size                 | 524288 bytes
 
 ### CUDA
 
-```
+```cpp
 size_t size = numElements * sizeof(int);
 int *h_a = (int *) malloc(size);
 cudaMalloc(&d_a, size);
@@ -393,7 +392,7 @@ cudaMemcpy(h_a, d_a, size, cudaMemcpyDeviceToHost);
 
 ### OpenACC
 
-```
+```cpp
 size_t size = numElements * sizeof(int);
 int *a = new int[numElements];
 #pragma acc enter data copyin(a[0:numElements])
@@ -438,7 +437,6 @@ void vector_add_cpu(int const n,
   с помощью отдельной нити.
 - Порядок исполнения нитей - произвольный.
 - Ядро может запросить номер своей нити.
-
 
 ```cpp
 __global__
@@ -491,7 +489,6 @@ void vector_add_gpu(int const n,
   "деление с округлением вверх". Например:  
   (257 + 256 - 1) / 256 = 512 / 2 = 2.
 
-
 ---
 
 ## CUDA. Достоинства
@@ -530,7 +527,7 @@ void vector_add_gpu(int const n,
 
 ## OpenACC. Сложение векторов
 
-```
+```cpp
 void vector_add_acc(int const n,
   int const *a, int const *b, int *r) {
 #pragma acc parallel loop \
@@ -576,7 +573,7 @@ void vector_add_acc(int const n,
 
 <!-- _class: lead -->
 
-## Пример распараллеливания
+## Пример распараллеливания 1
 
 ### Сортировка перечислением (enumeration sort)
 
@@ -586,7 +583,7 @@ void vector_add_acc(int const n,
 
 ## enum_sort: последовательная
 
-```
+```cpp
 void enum_sort_cpu(int const n, int const *a, int *r) {
 
   for (int i = 0; i < n; i++) {
@@ -609,7 +606,7 @@ void enum_sort_cpu(int const n, int const *a, int *r) {
 
 ## enum_sort: параллельная
 
-```
+```cpp
 void enum_sort_acc(int const n, int const *a, int *r) {
 
 #pragma acc parallel loop present(a[:n], r[:n])
@@ -624,12 +621,14 @@ void enum_sort_acc(int const n, int const *a, int *r) {
   }
 }
 ```
-```
+
+```cpp
 #pragma acc enter data copyin(a[:num_elem]) \
       create(r[:num_elem])
   enum_sort_acc(num_elem, a, r);
 #pragma acc exit data delete(a) copyout(r[:num_elem])
 ```
+
 ---
 
 ## enum_sort: директивы для компилятора
@@ -647,10 +646,11 @@ void enum_sort_acc(int const n, int const *a, int *r) {
 
 ## enum_sort: сообщения компилятора
 
-```
+```text
 16, Generating present(r[:n],a[:n])
     Generating Tesla code
-    19, #pragma acc loop gang, vector(128) /* blockIdx.x threadIdx.x */
+    19, #pragma acc loop
+          gang, vector(128) /* blockIdx.x threadIdx.x */
     22, #pragma acc loop seq
 22, Loop carried scalar dependence for rank at line 24
     Scalar last value needed after loop for rank at line 26
@@ -665,6 +665,127 @@ void enum_sort_acc(int const n, int const *a, int *r) {
 
 ---
 
+<!-- _class: lead -->
+
+## Пример распараллеливания 2
+
+### Префиксные суммы (prefix sum)
+
+<br/><br/><br/>
+
+---
+
+## Распараллеленный `dc_iter_acc`
+
+```cpp
+void dc_iter_acc(int const n, int *a) {
+  assert((n != 0) && ((n & (n - 1)) == 0));
+
+  // size - the size of a task
+  for (int size = 1; size < n; size *= 2) {
+    int num_tasks = n / (2 * size);
+#pragma acc data present(a[0:n])
+#pragma acc parallel loop collapse(2) independent
+    for (int task = 0; task < num_tasks; task++)
+      for (int j = 0; j < size; j++) {
+        int k = (2 * size) * task + size;
+        a[k + j] += a[k - 1];
+      }
+  }
+}
+```
+
+Что это: `present(a[0:n])`, `collapse(2)` и `independent`?
+
+---
+
+## `dc_iter_acc` - смысл директив #pragma
+
+```cpp
+#pragma acc data present(a[0:n])
+#pragma acc parallel loop collapse(2) independent
+    for (int task = 0; task < num_tasks; task++)
+      for (int j = 0; j < size; j++) {
+        int k = (2 * size) * task + size;
+        a[k + j] += a[k - 1];
+      }
+  }
+```
+
+- `present(a[0:n])` означает, что `a` уже в ГП.
+- `collapse(2)` "сплющивает" 2 вложенных цикла.
+- `independent` говорит комилятору, что `a[k + j] += a[k - 1]`
+  "не интерферируют". Автору алгоритма это ясно "по построению"
+  но **формально** проверить - трудно.
+
+---
+
+## `dc_iter_acc` - сообщения компилятора
+
+```text
+dc_iter_acc(int, int *):
+92, Generating present(a[:n])
+    Generating Tesla code
+    95, #pragma acc loop
+         gang, vector(128) collapse(2) /* blockIdx.x threadIdx.x */
+    96,   /* blockIdx.x threadIdx.x collapsed */
+```
+
+- Два внутренних цикла "сплющились" в один.
+- Для каждой комбинации переменных цикла запускается нить.
+  Эти нити объединены в блоки.
+- В каждом блоке - 128 нитей (4 жгута).
+
+
+---
+
+## Времена исполнения
+
+Algorithm      | Duration | Slow down
+---------------|---------|----
+prefix_sum_cpu | 0.094793 | 1.00
+dc_rec_cpu     | 0.538062 | 5.68
+dc_iter_cpu    | 0.718444 | 7.58
+dc_iter_acc    | 0.200135 | 2.11
+
+- Замедление по сравнению с простейшим алгоритмом `prefix_sum_cpu`.
+- При исполнении `dc_iter` на ГП вместо ЦП
+  ускорение в 3.59 раз!
+
+---
+
+## "Разбор полётов"
+
+- Алгоритм `dc` (divide and conquer) выполняет больше сложений.
+- `dc` выполняет больше "организационных" действий (вложеннные
+  циклы).
+- При этом `dc_iter` пригоден для распараллеливания и исполнения
+  на ГП, а исходный `prefix_sum_cpu` **в принципе** не годится
+  для параллельного исполнения.
+
+Этапы "распараллеливания":
+
+- **Заменили** `prefix_sum_cpu` на `dc_iter` (использовав
+  **ассоциативность и коммутативность** сложения!).
+- Организовали **параллельное исполнение** `dc_iter`.
+
+---
+
+## Выводы: что можно "распараллеливать"?
+
+- **Программу.**
+  - Вставляем директивы для компилятора.
+  - **Реорганизуем** программу.
+
+- **Алгоритм.**
+  - Выявляем скрытый параллелизм.
+  - **Заменяем на другой алгоритм.**
+
+- **Метод.**
+  - Изменяем или **заменяем** метод.
+
+<!--
 ## Разное
 
 - "Встреча у фонтана".
+-->
