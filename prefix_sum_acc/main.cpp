@@ -42,8 +42,9 @@ int main(int argc, char **argv) {
 		a[i] = rand() % num_elem;
 	}
 
+	std::copy(a, a + num_elem, s);
 	double prefix_sum_cpu_t1 = omp_get_wtime();
-	prefix_sum_cpu(num_elem, a, s);
+	prefix_sum_cpu(num_elem, s);
 	double prefix_sum_cpu_t2 = omp_get_wtime();
 	cout << "prefix_sum_cpu duration: " << fixed
 			<< (prefix_sum_cpu_t2 - prefix_sum_cpu_t1) << endl;
