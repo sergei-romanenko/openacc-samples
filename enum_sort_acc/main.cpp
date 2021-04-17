@@ -39,6 +39,10 @@ int main(int argc, char **argv) {
 	std::copy(a, a + num_elem, s);
 	std::sort(s, s + num_elem);
 
+	std::copy(a, a + num_elem, r);
+	bubble_sort(num_elem, r);
+	verify_result(num_elem, s, r);
+
 	enum_sort_cpu(num_elem, a, r);
 	verify_result(num_elem, s, r);
 
