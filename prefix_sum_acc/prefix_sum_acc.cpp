@@ -21,7 +21,7 @@ void exclusive_prefix_sum(int const n, int *a) {
 }
 
 // Kogge-Stone
-void ks_cpu(int const n, int const *a, int *r) {
+void ks_cpu(int const n, int *a) {
 	assert((n != 0) && ((n & (n - 1)) == 0));
 
 	int *z = (int*) malloc(2 * n * sizeof(int));
@@ -44,7 +44,7 @@ void ks_cpu(int const n, int const *a, int *r) {
 	}
 
 	for (int i = 0; i < n; i++)
-		r[i] = z[q * n + i];
+		a[i] = z[q * n + i];
 
 	free(z);
 }

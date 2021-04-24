@@ -4,7 +4,7 @@
 void inclusive_prefix_sum(int const n, int *a);
 void exclusive_prefix_sum(int const n, int *a);
 
-void ks_cpu(int const n, int const *a, int *r);
+void ks_cpu(int const n, int *a);
 
 void dc_rec(int const n, int *a);
 void dc_iter_cpu(int const n, int *a);

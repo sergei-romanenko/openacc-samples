@@ -20,9 +20,34 @@ void verify_result(char const *msg, const int num_elem, int *a, int *r) {
 //	cout << msg << ": OK" << endl;
 }
 
+void run_scan(char const *fn_name, void fn(int const, int*), int const num_elem,
+		int *r) {
+	double t1 = omp_get_wtime();
+	fn(num_elem, r);
+	double t2 = omp_get_wtime();
+	cout << fn_name << ": " << fixed << (t2 - t1) << endl;
+}
+
+void run_test_cpu(char const *fn_name, void fn(int const, int*),
+		int const num_elem, int *a, int *s, int *r) {
+	std::copy(a, a + num_elem, r);
+	run_scan(fn_name, fn, num_elem, r);
+	verify_result(fn_name, num_elem, s, r);
+}
+
+void run_test_acc(char const *fn_name, void fn(int const, int*),
+		int const num_elem, int *a, int *s, int *r) {
+	std::copy(a, a + num_elem, r);
+#pragma acc enter data copyin(r[0:num_elem])
+	run_scan(fn_name, fn, num_elem, r);
+#pragma acc exit data copyout(r[0:num_elem])
+	verify_result(fn_name, num_elem, s, r);
+}
+
 int main(int argc, char **argv) {
 //	int const num_elem = 8;
 //	int const num_elem = 16;
+//	int const num_elem = 1024;
 //	int const num_elem = 32768;
 	int const num_elem = 1024 * 1024 * 64;
 	cout << "Computing prefix sum for " << num_elem << " elements" << endl;
@@ -43,75 +68,21 @@ int main(int argc, char **argv) {
 	}
 
 	std::copy(a, a + num_elem, s);
-	double inclusive_prefix_sum_t1 = omp_get_wtime();
-	inclusive_prefix_sum(num_elem, s);
-	double inclusive_prefix_sum_t2 = omp_get_wtime();
-	cout << "inclusive_prefix_sum duration: " << fixed
-			<< (inclusive_prefix_sum_t2 - inclusive_prefix_sum_t1) << endl;
+	run_scan("inclusive_prefix_sum", inclusive_prefix_sum, num_elem, s);
 
-	double ks_cpu_t1 = omp_get_wtime();
-	ks_cpu(num_elem, a, r);
-	double ks_cpu_t2 = omp_get_wtime();
-	cout << "ks_cpu duration: " << fixed << (ks_cpu_t2 - ks_cpu_t1) << endl;
-	verify_result("ks_cpu", num_elem, s, r);
+	run_test_cpu("ks_cpu", ks_cpu, num_elem, a, s, r);
 
-	std::copy(a, a + num_elem, r);
-	double dc_rec_t1 = omp_get_wtime();
-	dc_rec(num_elem, r);
-	double dc_rec_t2 = omp_get_wtime();
-	cout << "dc_rec_cpu duration: " << fixed << (dc_rec_t2 - dc_rec_t1) << endl;
-	verify_result("dc_rec", num_elem, s, r);
-
-	std::copy(a, a + num_elem, r);
-	double dc_iter_cpu_t1 = omp_get_wtime();
-	dc_iter_cpu(num_elem, r);
-	double dc_iter_cpu_t2 = omp_get_wtime();
-	cout << "dc_iter_cpu duration: " << fixed
-			<< (dc_iter_cpu_t2 - dc_iter_cpu_t1) << endl;
-	verify_result("dc_iter_cpu", num_elem, s, r);
-
-	std::copy(a, a + num_elem, r);
-#pragma acc enter data copyin(r[0:num_elem])
-	double dc_iter_acc_t1 = omp_get_wtime();
-	dc_iter_acc(num_elem, r);
-	double dc_iter_acc_t2 = omp_get_wtime();
-#pragma acc exit data copyout(r[0:num_elem])
-	cout << "dc_iter_acc duration: " << fixed
-			<< (dc_iter_acc_t2 - dc_iter_acc_t1) << endl;
-	verify_result("dc_iter_acc", num_elem, s, r);
+	run_test_cpu("dc_rec", dc_rec, num_elem, a, s, r);
+	run_test_cpu("dc_iter_cpu", dc_iter_cpu, num_elem, a, s, r);
+	run_test_acc("dc_iter_acc", dc_iter_acc, num_elem, a, s, r);
 
 	std::copy(a, a + num_elem, s);
-	double exclusive_prefix_sum_t1 = omp_get_wtime();
-	exclusive_prefix_sum(num_elem, s);
-	double exclusive_prefix_sum_t2 = omp_get_wtime();
-	cout << "exclusive_prefix_sum duration: " << fixed
-			<< (exclusive_prefix_sum_t2 - exclusive_prefix_sum_t1) << endl;
+	run_scan("exclusive_prefix_sum", exclusive_prefix_sum, num_elem, s);
 
-	std::copy(a, a + num_elem, r);
-	double blelloch_rec_t1 = omp_get_wtime();
-	blelloch_rec(num_elem, r);
-	double blelloch_rec_t2 = omp_get_wtime();
-	cout << "blelloch_rec duration: " << fixed
-			<< (blelloch_rec_t2 - blelloch_rec_t1) << endl;
-	verify_result("blelloch_rec", num_elem, s, r);
+	run_test_cpu("blelloch_rec", blelloch_rec, num_elem, a, s, r);
+	run_test_cpu("blelloch_iter_cpu", blelloch_iter_cpu, num_elem, a, s, r);
+	run_test_acc("blelloch_iter_acc", blelloch_iter_acc, num_elem, a, s, r);
 
-	std::copy(a, a + num_elem, r);
-	double blelloch_iter_cpu_t1 = omp_get_wtime();
-	blelloch_iter_cpu(num_elem, r);
-	double blelloch_iter_cpu_t2 = omp_get_wtime();
-	cout << "blelloch_iter_cpu: " << fixed
-			<< (blelloch_iter_cpu_t2 - blelloch_iter_cpu_t1) << endl;
-	verify_result("blelloch_iter_cpu", num_elem, s, r);
-
-	std::copy(a, a + num_elem, r);
-#pragma acc enter data copyin(r[0:num_elem])
-	double blelloch_iter_acc_t1 = omp_get_wtime();
-	blelloch_iter_acc(num_elem, r);
-	double blelloch_iter_acc_t2 = omp_get_wtime();
-#pragma acc exit data copyout(r[0:num_elem])
-	cout << "blelloch_iter_acc: " << fixed
-			<< (blelloch_iter_acc_t2 - blelloch_iter_acc_t1) << endl;
-	verify_result("blelloch_iter_acc", num_elem, s, r);
 
 	cout << "Test PASSED" << endl;
 
