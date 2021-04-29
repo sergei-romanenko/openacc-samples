@@ -119,32 +119,6 @@ void blelloch_rec(int const n, int *a) {
 	blelloch_rec_down(n, a);
 }
 
-/*
- void blelloch_iter_cpu(int const n, int *a) {
- assert((n != 0) && ((n & (n - 1)) == 0));
-
- for (int size = 1; size < n; size *= 2) {
- int num_tasks = n / (2 * size);
- for (int task = 0; task < num_tasks; task++) {
- int k = (2 * size) * task + size - 1;
- a[k + size] += a[k];
- }
- }
-
- a[n - 1] = 0;
-
- for (int size = n / 2; size > 0; size /= 2) {
- int num_tasks = n / (2 * size);
- for (int task = 0; task < num_tasks; task++) {
- int k = (2 * size) * task + size - 1;
- int a_k = a[k];
- a[k] = a[k + size];
- a[k + size] += a_k;
- }
- }
- }
- */
-
 void blelloch_iter_cpu_up(int const n, int *const a) {
 	for (int size = 1; size < n; size *= 2) {
 		int num_tasks = n / (2 * size);
