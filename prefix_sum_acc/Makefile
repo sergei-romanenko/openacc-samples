@@ -4,6 +4,7 @@ PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 CC = nvcc -fast -acc=host,gpu -gpu=cc60 -Minfo=accel -cuda
 #CXX = g++ -O3 -fopenacc
 CXX = nvc++ -fast -acc=host,gpu -gpu=cc60 -Minfo=accel -cuda -std=c++17
+#CXX = nvc++ -g -O0 -acc=host,gpu -gpu=cc60 -Minfo=accel -cuda -std=c++17
 
 CUDAC=nvcc
 #CUDAFLAGS = -g -O0  -gencode arch=compute_60,code=sm_60

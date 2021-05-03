@@ -3,6 +3,25 @@
 
 #include "prefix_sum_acc.hpp"
 
+void loop_fusion(int const n, int *__restrict a, int *__restrict b) {
+#pragma acc data present(a[0:n], b[0:n])
+#pragma acc kernels
+	{
+#pragma acc loop gang, vector(128)
+		for (int i = 0; i < n; i++) {
+			a[i] = a[i] + 1;
+		}
+#pragma acc loop gang, vector(128)
+		for (int i = 0; i < n; i++) {
+			a[i] = a[i] * 2;
+		}
+	}
+}
+
+inline bool is_power_of_2(int const n) {
+	return (n >= 1) && ((n & (n - 1)) == 0);
+}
+
 void inclusive_prefix_sum(int const n, int *a) {
 	int acc = a[0];
 	for (int i = 1; i < n; i++) {
@@ -22,7 +41,7 @@ void exclusive_prefix_sum(int const n, int *a) {
 
 // Kogge-Stone
 void ks_cpu(int const n, int *a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	int *z = (int*) malloc(2 * n * sizeof(int));
 	int p = 1, q = 0;
@@ -52,7 +71,7 @@ void ks_cpu(int const n, int *a) {
 void dc_rec(int const n, int *a) {
 	if (n <= 1)
 		return;
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 	int m = n / 2;
 	dc_rec(m, a);
 	dc_rec(m, a + m);
@@ -62,7 +81,7 @@ void dc_rec(int const n, int *a) {
 }
 
 void dc_iter_cpu(int const n, int *a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	// size - the size of a chunk
 	for (int size = 1; size < n; size *= 2) {
@@ -76,7 +95,7 @@ void dc_iter_cpu(int const n, int *a) {
 }
 
 void dc_iter_acc(int const n, int *a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	// size - the size of a chunk
 	for (int size = 1; size < n; size *= 2) {
@@ -112,7 +131,7 @@ void blelloch_rec_down(int const n, int *a) {
 }
 
 void blelloch_rec(int const n, int *a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	blelloch_rec_up(n, a);
 	a[n - 1] = 0;
@@ -142,7 +161,7 @@ void blelloch_iter_cpu_down(int const n, int *const a) {
 }
 
 void blelloch_iter_cpu(int const n, int *a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	blelloch_iter_cpu_up(n, a);
 	a[n - 1] = 0;
@@ -179,7 +198,7 @@ void blelloch_iter_acc_down(int const n, int *const a) {
 }
 
 void blelloch_iter_acc(int const n, int *const a) {
-	assert((n != 0) && ((n & (n - 1)) == 0));
+	assert(is_power_of_2(n));
 
 	blelloch_iter_acc_up(n, a);
 
@@ -187,4 +206,104 @@ void blelloch_iter_acc(int const n, int *const a) {
 	a[n - 1] = 0;
 
 	blelloch_iter_acc_down(n, a);
+}
+
+inline int div_up(int n, int block_sz) {
+	return (n % block_sz == 0) ? (n / block_sz) : (n / block_sz + 1);
+}
+
+// --- dc_scan_fan_cpu
+
+void dc_scan_seq_cpu(const int n, int *const a) {
+	int acc = a[0];
+	for (int i = 1; i < n; i++) {
+		acc += a[i];
+		a[i] = acc;
+	}
+}
+
+void dc_scan_incr_cpu(const int chunk_sz, int num_chunks, int *h,
+		int *const a) {
+	for (int k = 1; k < num_chunks; k++)
+		for (int i = 0; i < chunk_sz; i++)
+			a[chunk_sz * k + i] += h[k - 1];
+}
+
+void dc_scan_fan_cpu(int const chunk_sz, int const n, int *const a) {
+	assert(is_power_of_2(chunk_sz));
+	assert(is_power_of_2(n));
+
+	if (n <= chunk_sz) {
+		dc_scan_seq_cpu(n, a);
+	} else {
+		int num_chunks = n / chunk_sz;
+		assert(num_chunks >= 2);
+		int *h = new int[num_chunks];
+		for (int k = 0; k < num_chunks; k++) {
+			dc_scan_seq_cpu(chunk_sz, a + chunk_sz * k);
+			h[k] = a[chunk_sz * k + (chunk_sz - 1)];
+		}
+		dc_scan_fan_cpu(chunk_sz, num_chunks, h);
+		dc_scan_incr_cpu(chunk_sz, num_chunks, h, a);
+		delete[] h;
+	}
+}
+
+void dc_scan_fan_cpu256(int const n, int *const a) {
+	dc_scan_fan_cpu(256, n, a);
+}
+
+// dc_scan_fan_acc
+
+#pragma acc routine seq
+void dc_scan_seq_acc(const int n, int *const a) {
+#pragma acc data present(a[0:n])
+	{
+		int acc = a[0];
+		for (int i = 1; i < n; i++) {
+			acc += a[i];
+			a[i] = acc;
+		}
+	}
+}
+
+void dc_scan_incr_acc(const int chunk_sz, int num_chunks, int *h,
+		int *const a) {
+#pragma acc data present(h[0:num_chunks], a[0:chunk_sz*num_chunks])
+#pragma acc kernels
+#pragma acc loop collapse(2) independent
+	for (int k = 1; k < num_chunks; k++)
+		for (int i = 0; i < chunk_sz; i++)
+			a[chunk_sz * k + i] += h[k - 1];
+}
+
+void dc_scan_fan_acc(int const chunk_sz, int const n, int *const a) {
+	assert(is_power_of_2(chunk_sz));
+	assert(is_power_of_2(n));
+
+	if (n <= chunk_sz) {
+#pragma acc data present(a[0:n])
+#pragma acc kernels
+		dc_scan_seq_acc(n, a);
+	} else {
+		int num_chunks = n / chunk_sz;
+		assert(num_chunks >= 2);
+		int *h = new int[num_chunks];
+#pragma acc enter data create(h[0:num_chunks])
+#pragma acc data present(a[0:n], h[0:num_chunks])
+#pragma acc kernels
+#pragma acc loop independent
+		for (int k = 0; k < num_chunks; k++) {
+			dc_scan_seq_acc(chunk_sz, a + chunk_sz * k);
+			h[k] = a[chunk_sz * k + (chunk_sz - 1)];
+		}
+		dc_scan_fan_acc(chunk_sz, num_chunks, h);
+		dc_scan_incr_acc(chunk_sz, num_chunks, h, a);
+#pragma acc exit data delete(h)
+		delete[] h;
+	}
+}
+
+void dc_scan_fan_acc256(int const n, int *const a) {
+	dc_scan_fan_acc(256, n, a);
 }

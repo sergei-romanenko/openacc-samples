@@ -14,4 +14,7 @@ void blelloch_rec(int const n, int *a);
 void blelloch_iter_cpu(int const n, int *a);
 void blelloch_iter_acc(int const n, int *a);
 
+void dc_scan_fan_cpu256(int const n, int *const a);
+void dc_scan_fan_acc256(int const n, int *const a);
+
 #endif

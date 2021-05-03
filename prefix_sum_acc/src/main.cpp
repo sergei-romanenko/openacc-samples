@@ -75,6 +75,8 @@ int main(int argc, char **argv) {
 	run_test_cpu("dc_rec", dc_rec, num_elem, a, s, r);
 	run_test_cpu("dc_iter_cpu", dc_iter_cpu, num_elem, a, s, r);
 	run_test_acc("dc_iter_acc", dc_iter_acc, num_elem, a, s, r);
+	run_test_cpu("dc_scan_fan_cpu256", dc_scan_fan_cpu256, num_elem, a, s, r);
+	run_test_acc("dc_scan_fan_acc256", dc_scan_fan_acc256, num_elem, a, s, r);
 
 	std::copy(a, a + num_elem, s);
 	run_scan("exclusive_prefix_sum", exclusive_prefix_sum, num_elem, s);
