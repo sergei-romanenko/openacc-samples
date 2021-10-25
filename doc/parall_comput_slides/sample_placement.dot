@@ -1,0 +1,11 @@
+digraph sample_placement {
+  "for" -> "initial assignment"
+  "initial assignment" -> "condition"
+  "condition" -> "code" [color=red, weight=1.0]
+  "condition" -> "final assignment"
+     [color=red, dir=back, weight=1.0];
+  "final assignment" -> "code"
+    [color=red, dir=back, weight=10.0];
+  "code" -> "end" [style=invis, weight=0.0];
+  "condition" -> "end" [color=red, weight=2.0]
+}
